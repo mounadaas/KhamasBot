@@ -1,0 +1,1 @@
+worker: python khamsat_bot.py

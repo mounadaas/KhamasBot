@@ -13,10 +13,11 @@ CHAT_ID = os.getenv("CHAT_ID")
 # 🔹 منع التكرار
 sent_links = set()
 
+# 🔹 headers
 headers = {"User-Agent": "Mozilla/5.0"}
 
-# 🔹 نأخذ آخر 15 دقيقة
-TIME_WINDOW = timedelta(minutes=15)
+# 🔹 أول تشغيل
+first_run = True
 
 def send_message(text):
     url = f"https://api.telegram.org/bot{TOKEN}/sendMessage"
@@ -27,6 +28,8 @@ def send_message(text):
         print("❌ Error sending:", e)
 
 def check_khamsat():
+    global first_run
+
     url = "https://khamsat.com/community/requests"
 
     try:
@@ -38,7 +41,7 @@ def check_khamsat():
 
         now = datetime.now(timezone.utc)
 
-        print("📌 Found:", len(projects))
+        print("\n📌 Found:", len(projects))
         print("🕒 Current time:", now)
 
         for p, t in zip(projects, times):
@@ -59,13 +62,28 @@ def check_khamsat():
             print("🕒 Published:", project_time)
             print("⏱️ Diff:", diff)
 
-            # 🔥 الشرط الصحيح
-            if diff <= TIME_WINDOW and link not in sent_links:
-                print("✅ NEW → Sending")
-                sent_links.add(link)
-                send_message(f"🔥 Khamsat NEW\n{title}\n{link}")
+            # 🔥 أول تشغيل
+            if first_run:
+                if diff <= timedelta(hours=2) and link not in sent_links:
+                    print("🚀 FIRST RUN → Sending")
+                    sent_links.add(link)
+                    send_message(f"🔥 Khamsat\n{title}\n{link}")
+                else:
+                    print("⏭️ Skipped (first run)")
+
+            # 🔥 بعد ذلك
             else:
-                print("⏭️ OLD or already sent")
+                if diff <= timedelta(minutes=15) and link not in sent_links:
+                    print("✅ NEW → Sending")
+                    sent_links.add(link)
+                    send_message(f"🔥 Khamsat NEW\n{title}\n{link}")
+                else:
+                    print("⏭️ Skipped")
+
+        # 🔹 بعد أول دورة فقط
+        if first_run:
+            print("\n✅ First run completed → switching to 15 min mode")
+            first_run = False
 
     except Exception as e:
         print("❌ Error:", e)
